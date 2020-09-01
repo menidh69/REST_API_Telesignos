@@ -385,12 +385,9 @@ class MunicipioResource(Resource):
 class ColoniasResource(Resource):
     def get(self):
         if request.args:
-            args = request.args
-            if 'nombre' in args:
-                nombre = args['nombre']
-                search = "%{}%".format(nombre)
-                colonias =Colonia.query.filter(Colonia.nombre_colonia.like(search)).all()
-                return colonias_schema.dump(colonias)
+            args = request.args.to_dict()
+            colonias = Colonia.query.filter_by(**args).all()
+            return colonias_schema.dump(colonias)
         else:
             colonias = Colonia.query.all()
             return colonias_schema.dump(colonias)
@@ -432,8 +429,13 @@ class ColoniaResource(Resource):
 #-----------hospitales-----------------
 class HospitalesResource(Resource):
     def get(self):
-        hospitales = Hospital.query.all()
-        return hospitales_schema.dump(hospitales)
+        if request.args:
+            args = request.args.to_dict()
+            hospitales = Hospital.query.filter_by(**args).all()
+            return hospitales_schema.dump(hospitales)       
+        else:
+            hospitales = Hospital.query.all()
+            return hospitales_schema.dump(hospitales)
     
     def post(self):
         new_hospital = Hospital(
@@ -478,8 +480,13 @@ class HospitalResource(Resource):
 #------------ambulancias-----------------
 class AmbulanciasResource(Resource):
     def get(self):
-        ambulancias = Ambulancia.query.all()
-        return ambulancias_schema.dump(ambulancias)
+        if request.args:
+            args = request.args.to_dict()
+            ambulancias = Ambulancia.query.filter_by(**args).all()
+            return ambulancias_schema.dump(ambulancias)
+        else:
+            ambulancias = Ambulancia.query.all()
+            return ambulancias_schema.dump(ambulancias)
     
     def post(self):
         new_ambulancia = Ambulancia(
@@ -513,8 +520,13 @@ class AmbulanciaResource(Resource):
 #------------servicios--------------------
 class ServiciosResource(Resource):
     def get(self):
-        servicios = Servicio.query.all()
-        return servicios_schema.dump(servicios)
+        if request.args:
+            args = request.args.to_dict()
+            servicios = Servicio.query.filter_by(**args).all()
+            return servicios_schema.dump(servicios)
+        else:
+            servicios = Servicio.query.all()
+            return servicios_schema.dump(servicios)
     
     def post(self):
         new_servicio = Servicio(
@@ -554,8 +566,13 @@ class ServicioResource(Resource):
 #------------pacientes--------------------
 class PacientesResource(Resource):
     def get(self):
-        pacientes = Paciente.query.all()
-        return pacientes_schema.dump(pacientes)
+        if request.args:
+            args = request.args.to_dict()
+            pacientes = Paciente.query.filter_by(**args).all()
+            return pacientes_schema.dump(pacientes)
+        else:
+            pacientes = Paciente.query.all()
+            return pacientes_schema.dump(pacientes)
     
     def post(self):
         paciente = Paciente(
@@ -602,8 +619,13 @@ class PacienteResource(Resource):
 
 class MovimientosResource(Resource):
     def get(self):
-        movimientos = Movimiento.query.all()
-        return movimientos_schema.dump(movimientos)
+        if request.args:
+            args = request.args.to_dict()
+            movimientos = Movimiento.query.filter_by(**args).all()
+            return movimientos_schema.dump(movimientos)
+        else:
+            movimientos = Movimiento.query.all()
+            return movimientos_schema.dump(movimientos)
     
     def post(self):
         movimiento = Movimiento(
@@ -661,8 +683,13 @@ class MovimientoResource(Resource):
 
 class Tipos_UrgenciaResource(Resource):
     def get(self):
-        tipos_urgencia = Tipo_Urgencia.query.all()
-        return tipos_urgencia_schema.dump(tipos_urgencia)
+        if request.args:
+            args = request.args.to_dict()
+            tipos = Tipo_Urgencia.query.filter_by(**args).all()
+            return tipos_urgencia_schema.dump(tipos)
+        else:
+            tipos_urgencia = Tipo_Urgencia.query.all()
+            return tipos_urgencia_schema.dump(tipos_urgencia)
     
     def post(self):
         tipo_urgencia = Tipo_Urgencia(
