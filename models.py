@@ -193,59 +193,59 @@ class Ambulancia(db.Model):
 #     def __repr__(self):
 #         return ('<id_tipo_usuario {}>'.format(self.id_tipo_usuario) + '<tipo_usuario {}>'.format(self.tipo_usuario))
 
-# class Usuario(UserMixin, db.Model):
-#     __tablename__ = 'usuarios'
-#     __table_args__ = {"schema": "public"}
+class Usuario(UserMixin, db.Model):
+    __tablename__ = 'usuarios'
+    __table_args__ = {"schema": "public"}
 
-#     id_usuario = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     nombre_usuario = db.Column(db.String(70), unique=True, index=True)
-#     id_tipo_usuario = db.Column(db.Integer, db.ForeignKey('public.tipo_usuario.id_tipo_usuario'), nullable=False)
-#     movimientos = db.relationship('Movimiento', backref='usuario', lazy=True)
-#     password_hash = db.Column(db.String(128))
+    id_usuario = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre_usuario = db.Column(db.String(70), unique=True, index=True)
+    id_tipo_usuario = db.Column(db.Integer, db.ForeignKey('public.tipo_usuario.id_tipo_usuario'), nullable=False)
+    movimientos = db.relationship('Movimiento', backref='usuario', lazy=True)
+    password_hash = db.Column(db.String(128))
 
-#     @property
-#     def password(self):
-#         raise AttributeError('password is not a readable attribute')
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
     
-#     @password.setter
-#     def password(self, password):
-#         self.password_hash = generate_password_hash(password)
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-#     def verify_password(self, password):
-#         return check_password_hash(self.password_hash, password)
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
-#     def get_id(self):
-#         return (self.id_usuario)
+    def get_id(self):
+        return (self.id_usuario)
 
 
-#     def __init__(self, **kwargs): 
-#         super(Usuario, self).__init__(**kwargs) 
-#         if self.role is None:
-#             if self.nombre_usuario == 'manuel' or 'cirett': 
-#                 self.role = Tipo_Usuario.query.filter_by(permissions=0xff).first()
-#             if self.role is None:
-#                 self.role = Tipo_Usuario.query.filter_by(registro=True).first()
+    def __init__(self, **kwargs): 
+        super(Usuario, self).__init__(**kwargs) 
+        if self.role is None:
+            if self.nombre_usuario == 'manuel' or 'cirett': 
+                self.role = Tipo_Usuario.query.filter_by(permissions=0xff).first()
+            if self.role is None:
+                self.role = Tipo_Usuario.query.filter_by(registro=True).first()
 
-#     def can(self, permissions):
-#         return self.role is not None and \
-#             (self.role.permissions & permissions) == permissions 
+    def can(self, permissions):
+        return self.role is not None and \
+            (self.role.permissions & permissions) == permissions 
         
-#     def is_administrator(self):
-#         return self.can(Permission.ADMINISTER)
+    def is_administrator(self):
+        return self.can(Permission.ADMINISTER)
 
-#     def __repr__(self):
-#         return '<nombre {}>'.format(self.nombre_usuario) + '<tipo: {}>'.format(self.role.tipo_usuario)
+    def __repr__(self):
+        return '<nombre {}>'.format(self.nombre_usuario) + '<tipo: {}>'.format(self.role.tipo_usuario)
     
-#     @property
-#     def password(self):
-#         raise AttributeError('password is not a readable attribute')
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
 
-#     @password.setter
-#     def password(self, password):
-#         self.password_hash = generate_password_hash(password)
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-#     def verify_password(self, password):
-#         return check_password_hash(self.password_hash, password)
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class Paciente(db.Model):
     __tablename__ = 'pacientes'
@@ -309,24 +309,11 @@ class Movimiento(db.Model):
     registros = db.relationship('Bitacora', backref='movimientos', lazy=True)
     
 
-    def __init__(self, id_movimiento, id_paciente, id_usuario, id_hospital, 
-    id_ambulancia, id_colonia, id_urgencia, fecha_inicio, fecha_final, presion_arterial, frec_cardiaca, frec_respiratoria,
-    temperatura, escala_glassgow, gravedad):
-        self.id_movimiento = id_movimiento
-        self.id_paciente = id_paciente
+    def __init__(self, id_usuario, id_ambulancia, id_colonia, id_urgencia):
         self.id_usuario = id_usuario
-        self.id_hospital = id_hospital
         self.id_ambulancia = id_ambulancia
         self.id_colonia = id_colonia
         self.id_urgencia = id_urgencia
-        self.fecha_inicio = fecha_inicio
-        self.fecha_final = fecha_final
-        self.presion_arterial = presion_arterial
-        self.frec_cardiaca = frec_cardiaca
-        self.frec_respiratoria = frec_respiratoria
-        self.temperatura = temperatura
-        self.escala_glassgow = escala_glassgow
-        self.gravedad = gravedad
 
     def __repr__(self):
         return '<id_movimiento {}>'.format(self.id_movimiento)

@@ -2,6 +2,7 @@ from flask import Flask, request
 from flask_restful import Resource, Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+from werkzeug.security import generate_password_hash, check_password_hash
 import enum
 
 app = Flask(__name__)
@@ -11,6 +12,12 @@ ma = Marshmallow(app)
 api = Api(app)
 
 #-------------MODELS---------------------
+class Permission: 
+    FOLLOW = 0x01
+    COMMENT = 0x02
+    WRITE_ARTICLES = 0x04
+    MODERATE_COMMENTS = 0x08
+    ADMINISTER = 0x80
 
 class UrgenciaEnum(enum.Enum):
     EMBARAZO='embarazo'
@@ -165,16 +172,71 @@ class Tipo_Urgencia(db.Model):
         return '<id_tipo_urgencia {}>'.format(self.id_tipo_urgencia) + '<urgencia {}>'.format(self.urgencia)
 
 
+class Usuario(db.Model):
+    __tablename__ = 'usuarios'
+    __table_args__ = {"schema": "public"}
+
+    id_usuario = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre_usuario = db.Column(db.String(70), unique=True, index=True)
+    id_tipo_usuario = db.Column(db.Integer, db.ForeignKey('public.tipo_usuario.id_tipo_usuario'), nullable=False)
+    movimientos = db.relationship('Movimiento', backref='usuario', lazy=True)
+    password_hash = db.Column(db.String(128))
+
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+    
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def get_id(self):
+        return (self.id_usuario)
+
+
+    def __init__(self, **kwargs): 
+        super(Usuario, self).__init__(**kwargs) 
+        if self.role is None:
+            if self.nombre_usuario == 'manuel' or 'cirett': 
+                self.role = Tipo_Usuario.query.filter_by(permissions=0xff).first()
+            if self.role is None:
+                self.role = Tipo_Usuario.query.filter_by(registro=True).first()
+
+    def can(self, permissions):
+        return self.role is not None and \
+            (self.role.permissions & permissions) == permissions 
+        
+    def is_administrator(self):
+        return self.can(Permission.ADMINISTER)
+
+    def __repr__(self):
+        return '<nombre {}>'.format(self.nombre_usuario) + '<tipo: {}>'.format(self.role.tipo_usuario)
+    
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
 class Movimiento(db.Model):
     __tablename__ = 'movimientos'
     __table_args__ = {"schema": "public"}
 
     id_movimiento = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    id_paciente = db.Column(db.Integer, db.ForeignKey('public.pacientes.id_paciente'), nullable=False)
-    id_usuario = db.Column(db.Integer, db.ForeignKey('public.usuarios.id_usuario'), nullable=False)
-    id_hospital = db.Column(db.Integer, db.ForeignKey('public.hospitales.id_hospital'), nullable=False)
-    id_ambulancia = db.Column(db.Integer, db.ForeignKey('public.ambulancias.id_ambulancia'), nullable=False)
-    id_tipo_urgencia = db.Column(db.Integer, db.ForeignKey('public.tipo_urgencia.id_tipo_urgencia'), nullable=False)
+    id_paciente = db.Column(db.Integer, db.ForeignKey('public.pacientes.id_paciente'))
+    id_usuario = db.Column(db.Integer, db.ForeignKey('public.usuarios.id_usuario'))
+    id_hospital = db.Column(db.Integer, db.ForeignKey('public.hospitales.id_hospital'))
+    id_ambulancia = db.Column(db.Integer, db.ForeignKey('public.ambulancias.id_ambulancia'))
+    id_tipo_urgencia = db.Column(db.Integer, db.ForeignKey('public.tipo_urgencia.id_tipo_urgencia'))
     fecha_inicio = db.Column(db.DateTime)
     fecha_final = db.Column(db.DateTime)
     presion_arterial = db.Column(db.String(10))
@@ -183,30 +245,36 @@ class Movimiento(db.Model):
     temperatura = db.Column(db.String(2))
     escala_glassgow = db.Column(db.String(10))
     gravedad = db.Column(db.Enum(Gravedad))
-    # registros = db.relationship('Bitacora', backref='movimientos', lazy=True)
+    registros = db.relationship('Bitacora', backref='movimientos', lazy=True)
     
 
-    def __init__(self, id_movimiento, id_paciente, id_usuario, id_hospital, 
-    id_ambulancia, id_colonia, id_urgencia, fecha_inicio, fecha_final, presion_arterial, frec_cardiaca, frec_respiratoria,
-    temperatura, escala_glassgow, gravedad):
-        self.id_movimiento = id_movimiento
-        self.id_paciente = id_paciente
-        self.id_usuario = id_usuario
-        self.id_hospital = id_hospital
+    def __init__(self, id_ambulancia, id_colonia, id_urgencia):
         self.id_ambulancia = id_ambulancia
         self.id_colonia = id_colonia
         self.id_urgencia = id_urgencia
-        self.fecha_inicio = fecha_inicio
-        self.fecha_final = fecha_final
-        self.presion_arterial = presion_arterial
-        self.frec_cardiaca = frec_cardiaca
-        self.frec_respiratoria = frec_respiratoria
-        self.temperatura = temperatura
-        self.escala_glassgow = escala_glassgow
-        self.gravedad = gravedad
 
     def __repr__(self):
         return '<id_movimiento {}>'.format(self.id_movimiento)
+
+
+class Bitacora(db.Model):
+    __tablename__ = 'bitacora'
+    __table_args__ = {"schema": "public"}
+
+    id_bitacora = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    fecha = db.Column(db.DateTime)
+    id_movimiento = db.Column(db.Integer, db.ForeignKey('public.movimientos.id_movimiento'))
+    tipo_movimiento = db.Column(db.Integer)
+
+
+    def __init__(self, id_bitacora, fecha, id_movimiento, tipo_movimiento):
+        self.fecha = fecha
+        self.id_movimiento = id_movimiento
+        self.tipo_movimiento = tipo_movimiento
+    
+    def __repr__(self):
+        return '<id_bitacora {}>'.format(self.id_bitacora)
+
 
 #----------SCHEMA------------------------
 
@@ -260,7 +328,7 @@ servicios_schema = ServicioSchema(many=True)
 ambulancia_schema = AmbulanciaSchema()
 ambulancias_schema = AmbulanciaSchema(many=True)
 tipo_urgencia_schema = Tipo_UrgenciaSchema()
-tipo_urgencias_schema = Tipo_UrgenciaSchema(many=True)
+tipos_urgencia_schema = Tipo_UrgenciaSchema(many=True)
 movimiento_schema = MovimientoSchema()
 movimientos_schema = MovimientoSchema(many=True)
 
@@ -514,6 +582,105 @@ class PacienteResource(Resource):
         db.session.commit()
         return '', 204
 
+#-----------movimientos--------------------
+
+class MovimientosResource(Resource):
+    def get(self):
+        movimientos = Movimiento.query.all()
+        return movimientos_schema.dump(movimientos)
+    
+    def post(self):
+        movimiento = Movimiento(
+            id_ambulancia=request.json['id_ambulancia'],
+            id_colonia=request.json['id_colonia'],
+            id_urgencia=request.json['id_urgencia']
+        )
+        db.session.add(movimiento)
+        db.session.commit()
+        return movimiento_schema.dump(movimiento)
+
+class MovimientoResource(Resource):
+    def get(self, id):
+        movimiento = Movimiento.query.get_or_404(id)
+        return movimiento_schema.dump(movimiento)
+    
+    def patch(self, id):
+        movimiento = Movimiento.query.get_or_404(id)
+        if 'id_paciente' in request.json:
+            movimiento.id_paciente = request.json['id_paciente']
+        if 'id_usuario' in request.json:
+            movimiento.id_usuario = request.json['id_usuario']
+        if 'id_hospital' in request.json:
+            movimiento.id_hospital = request.json['id_hospital']
+        if 'id_ambulancia' in request.json:
+            movimiento.id_ambulancia = request.json['id_ambulancia']
+        if 'id_tipo_urgencia' in request.json:
+            movimiento.id_tipo_urgencia = request.json['id_tipo_urgencia']
+        if 'fecha_inicio' in request.json:
+            movimiento.fecha_inicio = request.json['fecha_inicio']
+        if 'fecha_final' in request.json:
+            movimiento.fecha_final = request.json['fecha_final']
+        if 'presion_arterial' in request.json:
+            movimiento.presion_arterial = request.json['presion_arterial']
+        if 'frec_cardiaca' in request.json:
+            movimiento.frec_cardiaca = request.json['frec_cardiaca']
+        if 'frec_respiratoria' in request.json:
+            movimiento.frec_respiratoria = request.json['frec_respiratoria']
+        if 'temperatura' in request.json:
+            movimiento.temperatura = request.json['temperatura']
+        if 'escala_glassgow' in request.json:
+            movimiento.escala_glassgow = request.json['escala_glassgow']
+        if 'gravedad' in request.json:
+            movimiento.gravedad = request.json['gravedad']
+        db.session.commit()
+        return movimiento_schema.dump(movimiento)
+
+    def delete(self, id):
+        movimiento = Movimiento.query.get_or_404(id)
+        db.session.delete(movimiento)
+        db.session.commit()
+        return '', 204
+
+#-----------tipo_urgencia-------------------
+
+class Tipos_UrgenciaResource(Resource):
+    def get(self):
+        tipos_urgencia = Tipo_Urgencia.query.all()
+        return tipos_urgencia_schema.dump(tipos_urgencia)
+    
+    def post(self):
+        tipo_urgencia = Tipo_Urgencia(
+            urgencia = request.json['tipo_urgencia'],
+            descripcion = request.json['urgencia']
+        )
+        db.session.add(tipo_urgencia)
+        db.session.commit()
+        return tipo_urgencia_schema.dump(tipo_urgencia)
+
+class Tipo_UrgenciaResource(Resource):
+    def get(self, id):
+        tipo_urgencia = Tipo_Urgencia.query.get_or_404(id)
+        return tipo_urgencia_schema.dump(tipo_urgencia)
+    
+    def patch(self,id):
+        tipo_urgencia = Tipo_Urgencia.query.get_or_404(id)
+        if 'urgencia' in request.json:
+            tipo_urgencia.urgencia = request.json['urgencia']
+        if 'descripcion' in request.json:
+            tipo_urgencia.descripcion = request.json['descripcion']
+        db.session.commit()
+        return tipo_urgencia_schema.dump(tipo_urgencia)
+    
+    def delete(self, id):
+        tipo_urgencia = Tipo_Urgencia.query.get_or_404(id)
+        db.session.delete(tipo_urgencia)
+        db.session.commit()
+        return '', 204
+
+api.add_resource(Tipos_UrgenciaResource, '/tipos_urgencia')
+api.add_resource(Tipo_UrgenciaResource, '/tipo_urgencia/<int:id>')
+api.add_resource(MovimientoResource, '/movimiento/<int:id>')
+api.add_resource(MovimientosResource, '/movimientos')
 api.add_resource(PacientesResource, '/pacientes')
 api.add_resource(PacienteResource, '/paciente/<int:id>')
 api.add_resource(ServicioResource, '/servicio/<int:id>')
