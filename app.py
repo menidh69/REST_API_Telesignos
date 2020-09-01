@@ -337,8 +337,16 @@ movimientos_schema = MovimientoSchema(many=True)
 #----------municipio---------------
 class MunicipiosResource(Resource):
     def get(self):
-        municipios = Municipio.query.all()
-        return municipios_schema.dump(municipios)
+        if request.args:
+            args = request.args
+            if 'nombre' in args:
+                nombre = args['nombre']
+                search = "%{}%".format(nombre)
+                municipios = Municipio.query.filter(Municipio.nombre_municipio.like(search)).all()
+                return municipios_schema.dump(municipios)
+        else:
+            municipios = Municipio.query.all()
+            return municipios_schema.dump(municipios)
     
     #new
     def post(self):
@@ -376,8 +384,16 @@ class MunicipioResource(Resource):
 #-----------colonias--------------
 class ColoniasResource(Resource):
     def get(self):
-        colonias = Colonia.query.all()
-        return colonias_schema.dump(colonias)
+        if request.args:
+            args = request.args
+            if 'nombre' in args:
+                nombre = args['nombre']
+                search = "%{}%".format(nombre)
+                colonias =Colonia.query.filter(Colonia.nombre_colonia.like(search)).all()
+                return colonias_schema.dump(colonias)
+        else:
+            colonias = Colonia.query.all()
+            return colonias_schema.dump(colonias)
     
     def post(self):
         new_colonia = Colonia(
